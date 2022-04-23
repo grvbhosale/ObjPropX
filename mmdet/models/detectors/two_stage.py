@@ -21,6 +21,7 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
     def __init__(self,
                  backbone,
                  neck=None,
+                 neck_attn=None,
                  shared_head=None,
                  rpn_head=None,
                  bbox_roi_extractor=None,
@@ -37,6 +38,9 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
 
         if neck is not None:
             self.neck = builder.build_neck(neck)
+   
+        if neck_attn is not None:
+            self.neck_attn = builder.build_neck(neck_attn)
 
         if shared_head is not None:
             self.shared_head = builder.build_shared_head(shared_head)
@@ -90,6 +94,8 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
                     m.init_weights()
             else:
                 self.neck.init_weights()
+        if self.neck_attn:
+            self.neck_attn.init_weights()
         if self.with_shared_head:
             self.shared_head.init_weights(pretrained=pretrained)
         if self.with_rpn:
@@ -108,8 +114,14 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
 
     def extract_feat(self, img):
         x = self.backbone(img)
+        #print("shape of output of feature extractor only: ", len(x))
+        #for ky in x:
+         #   print("shapes: ", ky.shape)
         if self.with_neck:
             x = self.neck(x)
+        for ky in x:
+            print("shapes fpn out: ", ky.shape)
+        
         return x
 
     def forward_dummy(self, img):
@@ -153,14 +165,27 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
                       gt_masks=None,
                       ref_masks=None,
                       proposals=None):
+
+        #print("Type: ", type(gt_bboxes))
+        #print("img shape ", img.shape)
+        #print("ref img shape ", ref_img.shape)
+        #print("forward_train gt_bboxes shape : ", gt_bboxes)
+        #print("forward_train ref_bboxes shape : ", ref_bboxes)
+        #print("forward train gt_labels shape : ", gt_labels)
+        # print("forward train ref_masks shape : ", ref_masks)
+
         x = self.extract_feat(img)
         ref_x = self.extract_feat(ref_img)
+        
+        # Attn neck
+        sta = self.neck_attn(x, ref_x)
 
         losses = dict()
 
         # RPN forward and loss
         if self.with_rpn:
-            rpn_outs = self.rpn_head(x)
+            rpn_outs = self.rpn_head(sta)
+            # print("rpn_outs[0], rpn_outs[1] shape: ", rpn_outs[0].shape, rpn_outs[1].shape)
             rpn_loss_inputs = rpn_outs + (gt_bboxes, img_meta,
                                           self.train_cfg.rpn)
             rpn_losses = self.rpn_head.loss(
@@ -306,6 +331,8 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
                            proposals,
                            rcnn_test_cfg,
                            rescale=False):
+
+
         """Test only det bboxes without augmentation."""
         rois = bbox2roi(proposals)
         roi_feats = self.bbox_roi_extractor(
@@ -404,6 +431,7 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
         """Test without augmentation."""
         assert self.with_bbox, "Bbox head must be implemented."
         assert self.with_track, "Track head must be implemented"
+        print("Inference simple_test two_stage")
         x = self.extract_feat(img)
 
         proposal_list = self.simple_test_rpn(
@@ -439,7 +467,7 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, #BBoxTestMixin,
                     if type(r_boxes) == list:
                         continue
                     if img_meta[0]['video_id'] == 6:
-                        pdb.set_trace()
+                        pass #pdb.set_trace()
                     else:
                         continue
                     pred_mdict = self.prop_head.predict(

@@ -1,3 +1,3 @@
 from .fpn import FPN
-
-__all__ = ['FPN']
+from .overall_attn import AttnNeck
+__all__ = ['FPN', 'AttnNeck']
