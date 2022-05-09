@@ -1,5 +1,6 @@
 # ObjProp
 
+([Final paper](https://github.com/Allamrahul/ObjProp/blob/main/CS541_DL_Project.pdf))
 
 ## Introduction
 This work tackles the problem for the Video Instance Segmentation. The problem is an extension of Image Instance Segmentation from the image domain to video domain. Instance segmentation is the task of detecting and masking each distinct object of interest appearing in an image. The new problem aims at simultaneous detection, segmentation and tracking of object instances in videos. This work focuses on exploring attention mechanisms to improve performance of the baseline architecture "*[Object Propagation via Inter-Frame Attentions for Temporally Stable Video Instance Segmentation](https://arxiv.org/pdf/2111.07529.pdf)*" for Video Instance Segmentation. Two new modifications are introduced, an attention neck module for improving region proposals and weighing the inter-frame affinity for mask propagation. Moreover, the techniques of sampling reference frames for mask propagation are experimented on.
